@@ -47,10 +47,16 @@ on:
           - v2.3.1
           - v2.3.0
       targets:
-        type: string
+        type: choice
         required: false
-        default: '["vs2019-x86","vs2019-x64","vs2022-x86","vs2022-x64"]'
-        description: JSON array of build targets, e.g. ["vs2019-x64"] to build only one
+        default: all
+        description: Build targets to run
+        options:
+          - all
+          - vs2019-x86
+          - vs2019-x64
+          - vs2022-x86
+          - vs2022-x64
 
 permissions: read-all
 
@@ -67,34 +73,38 @@ jobs:
     runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
-        target: ${{ fromJson(inputs.targets) }}
+        target: ${{ fromJson(startsWith(inputs.targets, '[') && inputs.targets || (inputs.targets == 'all' && '["vs2019-x86","vs2019-x64","vs2022-x86","vs2022-x64"]' || format('["{0}"]', inputs.targets))) }}
         include:
           - target: vs2019-x86
             vs: VS2019
             arch: x86
-            runner: windows-2019
-            vcvars: C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat x86
+            runner: windows-2022
+            vcvars_bat: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat
+            vcvars_args: x86 -vcvars_ver=14.29
             with_avx: OFF
             artifact_name: fluid_inference-vs2019-x86
           - target: vs2019-x64
             vs: VS2019
             arch: x64
-            runner: windows-2019
-            vcvars: C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat
+            runner: windows-2022
+            vcvars_bat: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat
+            vcvars_args: x64 -vcvars_ver=14.29
             with_avx: ON
             artifact_name: fluid_inference-vs2019-x64
           - target: vs2022-x86
             vs: VS2022
             arch: x86
             runner: windows-2022
-            vcvars: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat x86
+            vcvars_bat: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat
+            vcvars_args: x86
             with_avx: OFF
             artifact_name: fluid_inference-vs2022-x86
           - target: vs2022-x64
             vs: VS2022
             arch: x64
             runner: windows-2022
-            vcvars: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat
+            vcvars_bat: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat
+            vcvars_args: x64
             with_avx: ON
             artifact_name: fluid_inference-vs2022-x64
     timeout-minutes: 240
@@ -114,9 +124,7 @@ jobs:
           set VSLANG=1033
           rem 'DISTUTILS_USE_SDK' indicates that the user has selected the compiler
           set DISTUTILS_USE_SDK=1
-          call "${{ matrix.vcvars }}"
-          rem Windows 10 Kit bin dir
-          set "PATH=C:\Program Files (x86)\Windows Kits\10\bin\10.0.17763.0\x64;%PATH%"
+          call "${{ matrix.vcvars_bat }}" ${{ matrix.vcvars_args }}
           if "${{ matrix.arch }}"=="x64" set PreferredToolArchitecture=x64
           rem Set the default generator for cmake to Ninja
           setx CMAKE_GENERATOR Ninja
@@ -131,7 +139,7 @@ jobs:
 
       - name: Build inference lib (${{ matrix.vs }} ${{ matrix.arch }})
         run: |
-          call "${{ matrix.vcvars }}"
+          call "${{ matrix.vcvars_bat }}" ${{ matrix.vcvars_args }}
           cd build
           ninja inference_lib_dist
 
