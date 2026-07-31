@@ -15,8 +15,8 @@ on:
       targets:
         type: string
         required: false
-        default: '["vs2019-x86","vs2019-x64","vs2022-x86","vs2022-x64"]'
-        description: JSON array of build targets, e.g. ["vs2019-x64"] to build only one
+        default: "vs2019-x64"
+        description: Build target to run, e.g. vs2019-x64 (JSON array accepted for advanced use)
   workflow_dispatch:
     inputs:
       ref:
@@ -49,14 +49,13 @@ on:
       targets:
         type: choice
         required: false
-        default: all
-        description: Build targets to run
+        default: vs2019-x64
+        description: Build target to run (only one, select it)
         options:
-          - all
-          - vs2019-x86
           - vs2019-x64
-          - vs2022-x86
+          - vs2019-x86
           - vs2022-x64
+          - vs2022-x86
 
 permissions: read-all
 
