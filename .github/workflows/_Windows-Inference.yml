@@ -65,9 +65,9 @@ jobs:
   build-cpu:
     name: Build CPU (${{ matrix.vs }} ${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
-    if: ${{ contains(fromJson(inputs.targets), matrix.target) }}
     strategy:
       matrix:
+        target: ${{ fromJson(inputs.targets) }}
         include:
           - target: vs2019-x86
             vs: VS2019
