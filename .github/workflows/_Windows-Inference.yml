@@ -1,4 +1,4 @@
-name: Windows-CPU-Inference
+name: Windows-CPU-Inference-vs2022-x64
 
 on:
   workflow_call:
@@ -12,11 +12,6 @@ on:
         required: false
         default: "v3.4.0"
         description: Branch, tag or commit SHA to build, e.g. v3.4.0
-      targets:
-        type: string
-        required: false
-        default: "vs2019-x64"
-        description: Build target to run, e.g. vs2019-x64 (JSON array accepted for advanced use)
   workflow_dispatch:
     inputs:
       ref:
@@ -46,16 +41,6 @@ on:
           - v2.3.2
           - v2.3.1
           - v2.3.0
-      targets:
-        type: choice
-        required: false
-        default: vs2019-x64
-        description: Build target to run (only one, select it)
-        options:
-          - vs2019-x64
-          - vs2019-x86
-          - vs2022-x64
-          - vs2022-x86
 
 permissions: read-all
 
@@ -68,44 +53,8 @@ defaults:
 
 jobs:
   build-cpu:
-    name: Build CPU (${{ matrix.vs }} ${{ matrix.arch }})
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      matrix:
-        target: ${{ fromJson(startsWith(inputs.targets, '[') && inputs.targets || (inputs.targets == 'all' && '["vs2019-x86","vs2019-x64","vs2022-x86","vs2022-x64"]' || format('["{0}"]', inputs.targets))) }}
-        include:
-          - target: vs2019-x86
-            vs: VS2019
-            arch: x86
-            runner: windows-2022
-            vcvars_bat: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat
-            vcvars_args: x86 -vcvars_ver=14.29
-            with_avx: OFF
-            artifact_name: fluid_inference-vs2019-x86
-          - target: vs2019-x64
-            vs: VS2019
-            arch: x64
-            runner: windows-2022
-            vcvars_bat: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat
-            vcvars_args: x64 -vcvars_ver=14.29
-            with_avx: ON
-            artifact_name: fluid_inference-vs2019-x64
-          - target: vs2022-x86
-            vs: VS2022
-            arch: x86
-            runner: windows-2022
-            vcvars_bat: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat
-            vcvars_args: x86
-            with_avx: OFF
-            artifact_name: fluid_inference-vs2022-x86
-          - target: vs2022-x64
-            vs: VS2022
-            arch: x64
-            runner: windows-2022
-            vcvars_bat: C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat
-            vcvars_args: x64
-            with_avx: ON
-            artifact_name: fluid_inference-vs2022-x64
+    name: Build CPU (VS2022 x64)
+    runs-on: windows-2022
     timeout-minutes: 240
     steps:
       - name: Checkout
@@ -117,14 +66,14 @@ jobs:
       - name: Install Ninja
         run: pip install ninja==1.11.1.4
 
-      - name: Configure cmake (${{ matrix.vs }} ${{ matrix.arch }})
+      - name: Configure cmake (VS2022 x64)
         run: |
           rem set vs language to english to block showIncludes
           set VSLANG=1033
           rem 'DISTUTILS_USE_SDK' indicates that the user has selected the compiler
           set DISTUTILS_USE_SDK=1
-          call "${{ matrix.vcvars_bat }}" ${{ matrix.vcvars_args }}
-          if "${{ matrix.arch }}"=="x64" set PreferredToolArchitecture=x64
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+          set PreferredToolArchitecture=x64
           rem Set the default generator for cmake to Ninja
           setx CMAKE_GENERATOR Ninja
           if not exist build mkdir build
@@ -132,19 +81,19 @@ jobs:
           cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release ^
             -DWITH_GPU=OFF -DWITH_PYTHON=OFF -DWITH_TESTING=OFF ^
             -DWITH_DISTRIBUTE=OFF -DWITH_TENSORRT=OFF -DON_INFER=ON ^
-            -DWITH_AVX=${{ matrix.with_avx }} -DWITH_MKL=OFF ^
+            -DWITH_AVX=ON -DWITH_MKL=OFF ^
             -DWITH_POCKETFFT=OFF -DWITH_UNITY_BUILD=ON ^
             -DMSVC_STATIC_CRT=ON
 
-      - name: Build inference lib (${{ matrix.vs }} ${{ matrix.arch }})
+      - name: Build inference lib (VS2022 x64)
         run: |
-          call "${{ matrix.vcvars_bat }}" ${{ matrix.vcvars_args }}
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
           cd build
           ninja inference_lib_dist
 
-      - name: Upload artifact (${{ matrix.vs }} ${{ matrix.arch }})
+      - name: Upload artifact (VS2022 x64)
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}
+          name: fluid_inference-vs2022-x64
           path: build\fluid_inference_install_dir\
           retention-days: 1
