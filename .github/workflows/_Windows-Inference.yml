@@ -7,6 +7,45 @@ on:
         type: string
         required: false
         default: "false"
+      ref:
+        type: string
+        required: false
+        default: "v3.4.0"
+        description: Branch, tag or commit SHA to build, e.g. v3.4.0
+      targets:
+        type: string
+        required: false
+        default: '["vs2019-x86","vs2019-x64","vs2022-x86","vs2022-x64"]'
+        description: JSON array of build targets, e.g. ["vs2019-x64"] to build only one
+  workflow_dispatch:
+    inputs:
+      ref:
+        type: choice
+        required: false
+        default: "v3.4.0"
+        description: PaddlePaddle version tag to build
+        options:
+          - v3.4.0
+          - v3.3.1
+          - v3.3.0
+          - v3.2.2
+          - v3.2.1
+          - v3.2.0
+          - v3.1.1
+          - v3.1.0
+          - v3.0.0
+          - v2.6.2
+          - v2.6.1
+          - v2.6.0
+          - v2.5.2
+          - v2.5.1
+          - v2.5.0
+          - v2.4.2
+          - v2.4.1
+          - v2.4.0
+          - v2.3.2
+          - v2.3.1
+          - v2.3.0
       targets:
         type: string
         required: false
@@ -63,6 +102,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
+          ref: ${{ inputs.ref }}
           fetch-depth: 1
 
       - name: Install Ninja
